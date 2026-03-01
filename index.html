@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAMMS Asset AutoDetect v2.1</title>
+<!-- ═══ PWA PATCH ═══ -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HAMMS">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<!-- ═══ END PWA PATCH ═══ -->
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500&family=Noto+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#090d12; --surface:#0e1620; --panel:#121c28; --card:#14202e;
+  --border:#1c2d3f; --border2:#243548;
+  --accent:#00c8a0; --accent2:#0096ff; --warn:#ffb340; --red:#ff4d6d; --purple:#a78bfa;
+  --text:#b8ccd8; --text-dim:#4a6070; --text-bright:#e0f0ff;
+  --good:#00c8a0; --repair:#ffb340; --replace:#ff4d6d;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans',sans-serif;font-size:13px;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,160,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,160,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none;z-index:0;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(5,10,16,.95);z-index:900;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+.modal-box{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:36px 40px;width:100%;max-width:460px;box-shadow:0 0 60px rgba(0,200,160,.1);}
+.m-tag{font-family:'Source Code Pro',monospace;font-size:10px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;}
+.m-title{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--text-bright);margin-bottom:3px;}
+.m-title span{color:var(--accent);}
+.m-sub{font-size:12px;color:var(--text-dim);margin-bottom:24px;}
+.m-label{font-family:'Source Code Pro',monospace;font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;}
+.m-inp{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:4px;color:var(--text-bright);font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:600;padding:11px 14px;outline:none;transition:border-color .2s;margin-bottom:12px;}
+.m-inp:focus{border-color:var(--accent);}
+.m-inp::placeholder{color:var(--text-dim);font-weight:400;font-size:15px;}
+.m-row{display:flex;gap:10px;margin-bottom:12px;}
+.m-row .m-inp{margin-bottom:0;font-size:15px;}
+.m-inp.sm{font-size:15px;}
+.btn-start{width:100%;background:var(--accent);color:#000;border:none;border-radius:4px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;padding:13px;cursor:pointer;transition:all .15s;margin-top:4px;}
+.btn-start:hover{background:#00e6b8;}
+.m-hint{font-size:11px;color:var(--text-dim);text-align:center;margin-top:10px;}
+.m-divider{border:none;border-top:1px solid var(--border);margin:18px 0;}
+
+/* APP LAYOUT */
+.app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;}
+
+/* HEADER */
+.app-hdr{border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:14px;background:rgba(9,13,18,.97);flex-shrink:0;}
+.hdr-ward{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:var(--text-bright);}
+.hdr-ward em{color:var(--accent);font-style:normal;margin-right:4px;}
+.hdr-date{font-family:'Source Code Pro',monospace;font-size:10px;color:var(--text-dim);}
+.hdr-insp{font-family:'Source Code Pro',monospace;font-size:10px;color:var(--accent2);margin-left:auto;}
+.btn-xs{background:transparent;border:1px solid var(--border2);color:var(--text-dim);border-radius:3px;font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:1px;padding:4px 10px;cursor:pointer;transition:all .15s;}
+.btn-xs:hover{border-color:var(--red);color:var(--red);}
+.hdr-rooms-badge{background:var(--surface);border:1px solid var(--border2);border-radius:3px;font-family:'Source Code Pro',monospace;font-size:9px;color:var(--warn);padding:3px 8px;}
+
+/* BODY */
+.app-body{display:flex;flex:1;overflow:hidden;}
+
+/* LEFT */
+.left{flex:1;overflow-y:auto;padding:16px 18px;border-right:1px solid var(--border);}
+
+.slabel{font-family:'Source Code Pro',monospace;font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px;}
+
+/* Room input */
+.room-wrap{display:flex;gap:8px;margin-bottom:12px;position:relative;}
+.room-inner{flex:1;position:relative;}
+.room-inp{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:4px;color:var(--text-bright);font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:600;padding:10px 13px 10px 40px;outline:none;transition:border-color .2s;}
+.room-inp:focus{border-color:var(--accent);}
+.room-inp::placeholder{color:var(--text-dim);font-weight:400;font-size:13px;}
+.ri-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;}
+.sugg{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border2);border-radius:4px;z-index:200;display:none;}
+.sugg.show{display:block;}
+.sugg-item{padding:8px 13px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:7px;transition:background .1s;}
+.sugg-item:hover{background:#182a3a;color:var(--accent);}
+.sugg-tag{font-size:9px;font-family:'Source Code Pro',monospace;color:var(--text-dim);margin-left:auto;}
+.btn-detect{background:var(--accent);color:#000;border:none;border-radius:4px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:0 18px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn-detect:hover{background:#00e6b8;}
+
+/* Status */
+.status{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:14px;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+.sdot.live{background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.stext{font-family:'Source Code Pro',monospace;font-size:9px;color:var(--text-dim);flex:1;}
+.scount{font-family:'Source Code Pro',monospace;font-size:9px;color:var(--accent);}
+
+/* Assets section */
+.assets-sec{display:none;}
+.assets-sec.show{display:block;}
+
+/* Category */
+.cat-block{margin-bottom:12px;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.cat-hdr{display:flex;align-items:center;gap:7px;padding:8px 13px;background:var(--panel);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.cat-icon{font-size:13px;}
+.cat-name{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-bright);}
+.cat-cnt{font-family:'Source Code Pro',monospace;font-size:9px;color:var(--accent);margin-left:auto;}
+.cat-tog{color:var(--text-dim);font-size:10px;margin-left:4px;}
+.cat-body{background:var(--surface);}
+
+/* Select all */
+.sal-bar{display:flex;align-items:center;gap:5px;padding:5px 13px 7px;border-bottom:1px solid var(--border);}
+.btn-sa{background:transparent;border:1px solid var(--border2);color:var(--text-dim);border-radius:2px;font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:1px;padding:2px 7px;cursor:pointer;transition:all .15s;}
+.btn-sa:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Asset row */
+.asset-row{border-bottom:1px solid var(--border);}
+.asset-row:last-child{border-bottom:none;}
+.asset-main{display:flex;align-items:center;gap:8px;padding:7px 13px;cursor:pointer;transition:background .1s;}
+.asset-main:hover{background:#0f1e2c;}
+.asset-row.checked .asset-main{background:#0c2318;}
+.achk{width:15px;height:15px;border:1.5px solid var(--border2);border-radius:2px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:9px;color:transparent;}
+.asset-row.checked .achk{background:var(--accent);border-color:var(--accent);color:#000;}
+.acode{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--text-dim);width:48px;flex-shrink:0;}
+.aname{flex:1;font-size:12px;color:var(--text);}
+.asset-row.checked .aname{color:var(--text-bright);}
+.aunit{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--text-dim);width:28px;text-align:center;flex-shrink:0;}
+.qty-w{display:flex;align-items:center;border:1px solid var(--border);border-radius:2px;overflow:hidden;}
+.qbtn{background:var(--panel);border:none;color:var(--text-dim);width:20px;height:20px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .1s;}
+.qbtn:hover{background:var(--border2);color:var(--text-bright);}
+.qinp{background:var(--surface);border:none;color:var(--text-bright);font-family:'Source Code Pro',monospace;font-size:10px;width:28px;text-align:center;outline:none;padding:0;}
+
+/* Detail panel (specs + condition) */
+.asset-detail{display:none;padding:8px 13px 12px 36px;background:#09141e;border-top:1px solid var(--border);flex-direction:column;gap:8px;}
+.asset-row.checked .asset-detail{display:flex;}
+.det-row{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;}
+.det-lbl{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--text-dim);letter-spacing:1px;width:56px;padding-top:3px;flex-shrink:0;}
+.pills{display:flex;flex-wrap:wrap;gap:3px;}
+.pill{
+  border:1px solid var(--border2);color:var(--text-dim);
+  border-radius:2px;font-family:'Source Code Pro',monospace;
+  font-size:8px;letter-spacing:.5px;padding:2px 7px;
+  cursor:pointer;transition:all .12s;background:transparent;
+}
+.pill:hover{border-color:var(--accent2);color:var(--accent2);}
+.pill.active{background:var(--accent2);border-color:var(--accent2);color:#fff;}
+
+/* Condition pills */
+.cond-pill{
+  border:1px solid var(--border2);color:var(--text-dim);
+  border-radius:2px;font-family:'Rajdhani',sans-serif;font-weight:600;
+  font-size:10px;letter-spacing:.5px;padding:3px 10px;
+  cursor:pointer;transition:all .12s;background:transparent;
+}
+.cond-pill:hover{opacity:.85;}
+.cond-pill[data-cond="Good"]{border-color:var(--good);}
+.cond-pill[data-cond="Good"]:hover,.cond-pill[data-cond="Good"].active{background:var(--good);color:#000;border-color:var(--good);}
+.cond-pill[data-cond="Need Repair"]{border-color:var(--repair);}
+.cond-pill[data-cond="Need Repair"]:hover,.cond-pill[data-cond="Need Repair"].active{background:var(--repair);color:#000;border-color:var(--repair);}
+.cond-pill[data-cond="For Replacement"]{border-color:var(--replace);}
+.cond-pill[data-cond="For Replacement"]:hover,.cond-pill[data-cond="For Replacement"].active{background:var(--replace);color:#fff;border-color:var(--replace);}
+
+/* Remarks */
+.remarks-inp{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'Noto Sans',sans-serif;font-size:11px;padding:3px 7px;outline:none;transition:border-color .15s;}
+.remarks-inp:focus{border-color:var(--accent);}
+.remarks-inp::placeholder{color:var(--text-dim);}
+
+/* Room done btn */
+.btn-room-done{
+  width:100%;margin-top:16px;padding:11px;
+  background:transparent;border:1px solid var(--accent);
+  color:var(--accent);border-radius:4px;
+  font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;
+  letter-spacing:1.5px;cursor:pointer;transition:all .15s;
+  display:none;
+}
+.btn-room-done:hover{background:var(--accent);color:#000;}
+.btn-room-done.show{display:block;}
+
+/* RIGHT PANEL */
+.right{width:280px;overflow-y:auto;padding:16px 14px;flex-shrink:0;background:var(--panel);}
+
+.session-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.session-title{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text-bright);}
+.btn-export-all{
+  background:var(--accent2);color:#fff;border:none;border-radius:3px;
+  font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:1px;padding:5px 12px;cursor:pointer;transition:all .15s;
+}
+.btn-export-all:hover{background:#2ab0ff;}
+.btn-export-all:disabled{background:var(--border2);color:var(--text-dim);cursor:not-allowed;}
+
+.no-rooms{text-align:center;padding:40px 10px;color:var(--text-dim);}
+.no-rooms-icon{font-size:32px;margin-bottom:8px;opacity:.4;}
+.no-rooms-text{font-size:11px;}
+
+/* Session room card */
+.room-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:4px;margin-bottom:8px;overflow:hidden;
+  transition:border-color .15s;
+}
+.room-card:hover{border-color:var(--border2);}
+.rc-header{padding:9px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.rc-num{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--text-bright);}
+.rc-type{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--text-dim);margin-left:auto;}
+.rc-count{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--accent);}
+.rc-tog{font-size:9px;color:var(--text-dim);}
+.rc-body{display:none;border-top:1px solid var(--border);padding:8px 12px;}
+.rc-body.open{display:block;}
+.rc-asset-line{display:flex;align-items:center;gap:5px;padding:3px 0;font-size:10px;color:var(--text);}
+.rc-cond{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.rc-cond.Good{background:var(--good);}
+.rc-cond.NeedRepair{background:var(--repair);}
+.rc-cond.ForReplacement{background:var(--replace);}
+.rc-cond.Unknown{background:var(--text-dim);}
+.rc-acode{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--text-dim);width:40px;}
+.rc-qty{font-family:'Source Code Pro',monospace;font-size:8px;color:var(--accent2);margin-left:auto;}
+.rc-del{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:11px;padding:0 4px;transition:color .15s;}
+.rc-del:hover{color:var(--red);}
+
+/* Summary counts */
+.sum-bar{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.sum-chip{flex:1;min-width:56px;background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:5px 7px;text-align:center;}
+.sum-n{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;}
+.sum-n.g{color:var(--good);}
+.sum-n.r{color:var(--repair);}
+.sum-n.x{color:var(--replace);}
+.sum-n.t{color:var(--text-bright);}
+.sum-l{font-family:'Source Code Pro',monospace;font-size:7px;color:var(--text-dim);letter-spacing:.5px;}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#000;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:1px;padding:9px 22px;border-radius:4px;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Responsive */
+@media(max-width:700px){
+  .right{display:none;}
+  .app-body{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ MODAL ══ -->
+<div class="modal-ov" id="modalOv">
+  <div class="modal-box">
+    <div class="m-tag">DOPMC · GSD · HAMMS v2.0</div>
+    <div class="m-title">Asset <span>AutoDetect</span></div>
+    <div class="m-sub">Start a new inspection session by setting the ward and inspector details.</div>
+
+    <div class="m-label">Ward / Area to Inspect</div>
+    <input class="m-inp" id="mWard" placeholder="e.g., OB WARD, Pediatric Ward, ICU Wing…">
+
+    <div class="m-label">Inspector Name</div>
+    <input class="m-inp sm" id="mInspector" placeholder="Full name of inspector">
+
+    <div class="m-label">Date of Inspection</div>
+    <input class="m-inp sm" id="mDate" type="date">
+
+    <hr class="m-divider">
+    <button class="btn-start" id="btnStart">▶ START INSPECTION SESSION</button>
+    <div class="m-hint">All rooms inspected in this session will compile into one master CSV.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ APP ══ -->
+<div class="app" id="appRoot" style="display:none">
+
+  <!-- Header -->
+  <div class="app-hdr">
+    <div class="hdr-ward"><em>🏥</em><span id="hdrWard">—</span></div>
+    <div class="hdr-date" id="hdrDate"></div>
+    <div class="hdr-rooms-badge" id="hdrRoomsBadge">0 rooms</div>
+    <div class="hdr-insp" id="hdrInsp"></div>
+    <button class="btn-xs" id="btnNewSession">NEW SESSION</button>
+  </div>
+
+  <div class="app-body">
+
+    <!-- LEFT: Room input + assets -->
+    <div class="left">
+      <div class="slabel">// STEP 1 — ENTER ROOM / LOCATION</div>
+      <div class="room-wrap">
+        <div class="room-inner">
+          <span class="ri-icon">🚪</span>
+          <input class="room-inp" id="roomInp" placeholder="Type: Room 201, Corridor A, Delivery Room…" autocomplete="off">
+          <div class="sugg" id="sugg"></div>
+        </div>
+        <button class="btn-detect" id="btnDetect">DETECT ASSETS</button>
+      </div>
+
+      <div class="status" id="statusBar">
+        <div class="sdot" id="sdot"></div>
+        <div class="stext" id="stext">Ready — Enter a room or location to begin</div>
+        <div class="scount" id="scnt"></div>
+      </div>
+
+      <div class="assets-sec" id="assetsSec">
+        <div class="slabel" style="margin-bottom:10px">// STEP 2 — CONFIRM ASSETS &amp; CONDITIONS</div>
+        <div id="catContainer"></div>
+        <button class="btn-room-done" id="btnRoomDone">✓ SAVE ROOM &amp; INSPECT NEXT ROOM</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Session panel -->
+    <div class="right">
+      <div class="session-header">
+        <div class="session-title">SESSION ROOMS</div>
+        <button class="btn-export-all" id="btnExportAll" disabled>⬇ EXPORT CSV</button>
+      </div>
+
+      <div class="sum-bar" id="sumBar">
+        <div class="sum-chip"><div class="sum-n t" id="sumTotal">0</div><div class="sum-l">ASSETS</div></div>
+        <div class="sum-chip"><div class="sum-n g" id="sumGood">0</div><div class="sum-l">GOOD</div></div>
+        <div class="sum-chip"><div class="sum-n r" id="sumRepair">0</div><div class="sum-l">REPAIR</div></div>
+        <div class="sum-chip"><div class="sum-n x" id="sumReplace">0</div><div class="sum-l">REPLACE</div></div>
+      </div>
+
+      <div id="sessionList">
+        <div class="no-rooms" id="noRooms">
+          <div class="no-rooms-icon">📋</div>
+          <div class="no-rooms-text">No rooms saved yet.<br>Complete a room to see it here.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  SPEC DEFINITIONS — per asset code
+// ═══════════════════════════════════════════════════════════
+const SPECS = {
+  // ELECTRICAL
+  'EL-001':{ wattage:['20W','36W','40W'],config:['Single Tube','Double Tube','4-Tube'] },
+  'EL-002':{ size:['2x2 (600x600)','2x4 (600x1200)'],wattage:['36W','40W','48W','60W'] },
+  'EL-003':{ wattage:['7W','9W','12W','15W','18W'],finish:['White','Chrome','Black'] },
+  'EL-004':{ type:['Wall-mounted','Ceiling-mounted'],wattage:['6W','9W','12W'] },
+  'EL-006':{ gang:['1-Gang','2-Gang','3-Gang'],type:['Standard','Grounded (3-pin)','Universal'] },
+  'EL-007':{ gang:['1-Gang','2-Gang'],type:['Grounded','GFCI/ELCB'] },
+  'EL-008':{ gang:['1-Gang','2-Gang','3-Gang'],type:['Toggle','Rocker'] },
+  'EL-009':{ gang:['2-Gang','3-Gang','4-Gang'],type:['Toggle','Rocker'] },
+  'EL-012':{ size:['16"','18"','24"'],type:['Ceiling','Wall-mounted'] },
+  'EL-013':{ size:['6"','8"','10"','12"'],type:['Wall','Ceiling','Inline Duct'] },
+  'EL-014':{ capacity:['500VA','1KVA','2KVA','3KVA'],type:['UPS','AVR','UPS+AVR'] },
+  // VENTILATION — SPLIT TYPE AIRCON
+  'AC-S01':{ capacity:['0.5HP','0.75HP','1HP','1.5HP','2HP','2.5HP','3HP'], inverter:['Inverter','Non-Inverter'], brand:['Samsung','LG','Carrier','Koppel','Daikin','Midea','Panasonic','Fujitsu','Trane','York'] },
+  // VENTILATION — WINDOW TYPE AIRCON
+  'AC-W01':{ capacity:['0.5HP','0.75HP','1HP','1.5HP','2HP'], brand:['Carrier','Koppel','Fedders','Emerson','Condura','American Standard'] },
+  // VENTILATION — CASSETTE TYPE AIRCON
+  'AC-C01':{ capacity:['2HP','2.5HP','3HP','4HP','5HP'], brand:['Carrier','Daikin','Trane','York','Panasonic','Midea'] },
+  // VENTILATION — FLOOR-STANDING / CONSOLE AIRCON
+  'AC-F01':{ capacity:['2HP','2.5HP','3HP','4HP','5HP'], brand:['Carrier','Daikin','Samsung','LG','York'] },
+  // VENTILATION — CEILING CONCEALED DUCTED
+  'AC-D01':{ capacity:['2HP','3HP','4HP','5HP','6HP'], brand:['Carrier','Daikin','Trane','York','Mitsubishi'] },
+  // VENTILATION — AHU / PACKAGED UNIT
+  'AC-A01':{ capacity:['3TR','5TR','7.5TR','10TR','15TR','20TR'], brand:['Carrier','Trane','York','Lennox'] },
+  // VENTILATION — EXHAUST FANS
+  'EF-W01':{ size:['4"','6"','8"','10"','12"'], type:['Wall-mounted','Shutter Type','Louvered','Propeller'] },
+  'EF-C01':{ size:['4"','6"','8"','10"'], type:['Ceiling-mounted','Recessed','Inline Duct'] },
+  'EF-D01':{ size:['4"','6"','8"','10"','12"'], type:['Inline Duct','Centrifugal','Axial'] },
+  'EF-I01':{ size:['12"','16"','18"','20"','24"'], type:['Axial Blower','Centrifugal Blower','Industrial Propeller'] },
+  // VENTILATION — ELECTRIC FANS
+  'VF-T01':{ size:['10"','12"','16"'], speed:['2-Speed','3-Speed','Variable Speed'] },
+  'VF-P01':{ size:['16"','18"','20"'], speed:['2-Speed','3-Speed','Variable Speed'], type:['Standard Stand','Industrial Stand'] },
+  'VF-W01':{ size:['16"','18"','20"'], speed:['2-Speed','3-Speed'], mounting:['Bracket Wall-mount','Direct Wall-mount'] },
+  'VF-O01':{ size:['16"','18"','20"','24"'], speed:['2-Speed','3-Speed'] },
+  // VENTILATION — ACCESSORIES
+  'VT-001':{ type:['Supply Grille','Return Grille','Linear Diffuser','Ceiling Diffuser'], size:['150x150mm','200x200mm','300x300mm','600x150mm','600x300mm'] },
+  'VT-002':{ size:['4"','6"','8"','10"','12"'], type:['Aluminum Flexible','Insulated Flexible','Rigid GI'] },
+  // PLUMBING
+  'PL-001':{ size:['400mm (S)','500mm (M)','600mm (L)'],type:['Pedestal','Wall-hung','Counter-top','Undermount'] },
+  'PL-002':{ type:['Single Lever','Two-Handle','Sensor/Auto','Goose-neck','Surgical Elbow'] },
+  'PL-003':{ type:['Floor-mounted','Wall-hung','Elongated','Standard'],flush:['Gravity','Flush Valve','Dual Flush'] },
+  'PL-004':{ size:['3"','4"','6"','8"'],material:['PVC','Stainless Steel','Cast Iron'] },
+  'PL-007':{ bays:['1-Bay','2-Bay','3-Bay'],size:['Small (450mm)','Medium (600mm)','Large (750mm)'] },
+  'PL-008':{ size:['400mm','600mm','760mm'],type:['Floor Sink','Mop Sink','Utility Sink'] },
+  'PL-009':{ capacity:['6L','10L','15L'],type:['Instant Heater','Storage Type'] },
+  'PL-012':{ size:['100L','200L','300L','500L'],type:['Pressure Tank','Elevated Tank','GI','Fiberglass'] },
+  'PL-013':{ type:['Submersible','Centrifugal','Booster'],hp:['0.5HP','0.75HP','1HP','1.5HP','2HP'] },
+  // CIVIL — WINDOWS
+  'CP-007':{ size:['0.6x0.6m','0.6x1.2m','1.2x1.2m','1.5x1.2m','1.8x1.2m'],type:['Sliding','Jalousie','Casement','Awning','Fixed (Louver)'] },
+  'CP-008':{ size:['0.6x0.6m','0.6x1.2m','1.2x1.2m'],blades:['4-lite','6-lite','8-lite'] },
+  'CP-015':{ size:['0.6x0.6m','0.6x1.2m','1.2x1.2m','1.5x1.5m'],type:['Aluminum Frame','Steel Frame','uPVC'] },
+  // CIVIL — DOORS
+  'CP-005':{ size:['0.8x2.1m','0.9x2.1m','1.0x2.1m'],type:['Solid Wood','Hollow Core','Fire Door'] },
+  'CP-006':{ size:['0.9x2.1m','1.2x2.1m','1.5x2.1m'],type:['Single Leaf','Double Leaf','Sliding'] },
+  // MEDICAL
+  'ME-001':{ type:['2-Crank (Manual)','3-Crank (Manual)'],rails:['Full Rails','Half Rails'] },
+  'ME-002':{ function:['2-Function','3-Function','5-Function'],brand:['Paramount','Stryker','Hill-Rom'] },
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ASSET DATABASE
+// ═══════════════════════════════════════════════════════════
+const ASSET_DB = {
+  ELECTRICAL:{icon:'⚡',assets:[
+    {code:'EL-001',name:'Fluorescent Lamp (T8)',unit:'set'},
+    {code:'EL-002',name:'LED Panel Light',unit:'pc'},
+    {code:'EL-003',name:'LED Downlight (Recessed)',unit:'pc'},
+    {code:'EL-004',name:'Emergency Light',unit:'pc'},
+    {code:'EL-005',name:'Exit Light / Signage',unit:'pc'},
+    {code:'EL-006',name:'Electrical Outlet (Duplex)',unit:'pc'},
+    {code:'EL-007',name:'Grounded Outlet (3-prong)',unit:'pc'},
+    {code:'EL-008',name:'Wall Switch',unit:'pc'},
+    {code:'EL-009',name:'Gang Switch (Multi)',unit:'pc'},
+    {code:'EL-010',name:'Distribution Panel Board',unit:'pc'},
+    {code:'EL-011',name:'Circuit Breaker',unit:'pc'},
+    {code:'EL-012',name:'Ceiling Fan',unit:'pc'},
+    {code:'EL-013',name:'Exhaust Fan',unit:'pc'},
+    {code:'EL-014',name:'UPS / AVR Unit',unit:'pc'},
+    {code:'EL-015',name:'Nurse Call System',unit:'set'},
+    {code:'EL-016',name:'Bedhead Panel / Medical Gas Outlet',unit:'pc'},
+    {code:'EL-017',name:'CCTV Camera',unit:'pc'},
+    {code:'EL-018',name:'Intercom Unit',unit:'pc'},
+    {code:'EL-019',name:'Corridor Call Light',unit:'pc'},
+  ]},
+  VENTILATION:{icon:'🌬️',assets:[
+    // ── AIR CONDITIONING ──
+    {code:'AC-S01',name:'Split-Type Aircon (Wall-mounted)',unit:'unit'},
+    {code:'AC-W01',name:'Window-Type Aircon',unit:'unit'},
+    {code:'AC-C01',name:'Cassette-Type Aircon (Ceiling)',unit:'unit'},
+    {code:'AC-F01',name:'Floor-Standing / Console Aircon',unit:'unit'},
+    {code:'AC-D01',name:'Ceiling Concealed Ducted Aircon',unit:'unit'},
+    {code:'AC-A01',name:'AHU / Packaged Unit',unit:'unit'},
+    {code:'AC-H01',name:'HEPA Air Filtration Unit',unit:'unit'},
+    {code:'AC-N01',name:'Negative Pressure Ventilation Unit',unit:'unit'},
+    {code:'AC-T01',name:'Thermostat / Temperature Controller',unit:'pc'},
+    // ── EXHAUST FANS ──
+    {code:'EF-W01',name:'Exhaust Fan (Wall-mounted)',unit:'pc'},
+    {code:'EF-C01',name:'Exhaust Fan (Ceiling-mounted)',unit:'pc'},
+    {code:'EF-D01',name:'Inline Duct / Centrifugal Fan',unit:'pc'},
+    {code:'EF-I01',name:'Industrial Blower / Axial Fan',unit:'pc'},
+    // ── ELECTRIC FANS ──
+    {code:'VF-T01',name:'Electric Fan (Desk / Table)',unit:'pc'},
+    {code:'VF-P01',name:'Electric Fan (Stand / Pedestal)',unit:'pc'},
+    {code:'VF-W01',name:'Electric Fan (Wall-mounted)',unit:'pc'},
+    {code:'VF-O01',name:'Electric Fan (Industrial / Orbit)',unit:'pc'},
+    // ── ACCESSORIES ──
+    {code:'VT-001',name:'Air Grille / Diffuser (Supply/Return)',unit:'pc'},
+    {code:'VT-002',name:'Flexible / GI Duct',unit:'lfm'},
+  ]},
+  PLUMBING:{icon:'🚿',assets:[
+    {code:'PL-001',name:'Lavatory / Wash Basin',unit:'pc'},
+    {code:'PL-002',name:'Faucet',unit:'pc'},
+    {code:'PL-003',name:'Water Closet (Toilet Bowl)',unit:'pc'},
+    {code:'PL-004',name:'Floor Drain',unit:'pc'},
+    {code:'PL-005',name:'Soap Dispenser (Wall)',unit:'pc'},
+    {code:'PL-006',name:'Alcohol Dispenser (Sensor)',unit:'pc'},
+    {code:'PL-007',name:'Scrub / Clinical Sink',unit:'pc'},
+    {code:'PL-008',name:'Utility / Mop Sink',unit:'pc'},
+    {code:'PL-009',name:'Water Heater',unit:'unit'},
+    {code:'PL-010',name:'Bedpan Washer',unit:'pc'},
+    {code:'PL-011',name:'Eyewash Station',unit:'pc'},
+    {code:'PL-012',name:'Water Storage Tank',unit:'unit'},
+    {code:'PL-013',name:'Water Pump',unit:'unit'},
+    {code:'PL-014',name:'Roof Drain / Canopy Drain',unit:'pc'},
+    {code:'PL-015',name:'Clean-Out (Access)',unit:'pc'},
+    {code:'PL-016',name:'Grease Trap',unit:'pc'},
+    {code:'PL-017',name:'Bidet Sprayer / Hygienic Shower',unit:'pc'},
+    {code:'PL-018',name:'Shower Head / Shower Assembly',unit:'pc'},
+    {code:'PL-019',name:'GI Pipe (Exposed Supply Line)',unit:'lfm'},
+    {code:'PL-020',name:'PVC Drain Line (Exposed)',unit:'lfm'},
+    {code:'PL-021',name:'Gate Valve / Ball Valve',unit:'pc'},
+    {code:'PL-022',name:'Pressure Gauge',unit:'pc'},
+  ]},
+  CIVIL:{icon:'🏗️',assets:[
+    {code:'CP-001',name:'Ceiling (Gypsum Board)',unit:'sqm'},
+    {code:'CP-002',name:'Ceiling (Metal Deckplate/PVC)',unit:'sqm'},
+    {code:'CP-003',name:'Partition Wall (CHB)',unit:'sqm'},
+    {code:'CP-004',name:'Partition Wall (Drywall)',unit:'sqm'},
+    {code:'CP-005',name:'Door (Solid/Fire)',unit:'pc'},
+    {code:'CP-006',name:'Door (Aluminum Frame)',unit:'pc'},
+    {code:'CP-007',name:'Window (Sliding Aluminum)',unit:'pc'},
+    {code:'CP-008',name:'Window (Jalousie)',unit:'pc'},
+    {code:'CP-009',name:'Window (Casement/Awning)',unit:'pc'},
+    {code:'CP-010',name:'Window (Fixed / Louver)',unit:'pc'},
+    {code:'CP-011',name:'Ceramic Floor Tiles',unit:'sqm'},
+    {code:'CP-012',name:'Homogeneous Tiles',unit:'sqm'},
+    {code:'CP-013',name:'Epoxy Floor Coating',unit:'sqm'},
+    {code:'CP-014',name:'Vinyl Sheet Flooring',unit:'sqm'},
+    {code:'CP-015',name:'Glass Window / Curtain Wall',unit:'pc'},
+    {code:'CP-016',name:'Painted Wall Surface',unit:'sqm'},
+    {code:'CP-017',name:'Ceramic Wall Tiles',unit:'sqm'},
+    {code:'CP-018',name:'Handrail (Stainless)',unit:'lfm'},
+    {code:'CP-019',name:'Cabinet / Storage Locker',unit:'pc'},
+    {code:'CP-020',name:'Corridor Handrail / Grab Bar',unit:'lfm'},
+    {code:'CP-021',name:'Door Closer / Hydraulic Arm',unit:'pc'},
+    {code:'CP-022',name:'Door Lock / Lockset',unit:'pc'},
+    {code:'CP-023',name:'Expansion Joint Cover',unit:'lfm'},
+    {code:'CP-024',name:'Wheelchair Ramp',unit:'set'},
+    {code:'CP-025',name:'Staircase / Landing',unit:'flight'},
+  ]},
+  MEDICAL:{icon:'🩺',assets:[
+    {code:'ME-001',name:'Hospital Bed (Manual)',unit:'pc'},
+    {code:'ME-002',name:'Hospital Bed (Electric)',unit:'pc'},
+    {code:'ME-003',name:'IV Stand / Drip Stand',unit:'pc'},
+    {code:'ME-004',name:'Overbed Table',unit:'pc'},
+    {code:'ME-005',name:'Bedside Cabinet',unit:'pc'},
+    {code:'ME-006',name:'Nurse Station Desk',unit:'pc'},
+    {code:'ME-007',name:'Medicine Cabinet (Lockable)',unit:'pc'},
+    {code:'ME-008',name:'Crash Cart / Emergency Trolley',unit:'pc'},
+    {code:'ME-009',name:'Oxygen Flowmeter',unit:'pc'},
+    {code:'ME-010',name:'Suction Machine',unit:'pc'},
+    {code:'ME-011',name:'Patient Monitor',unit:'pc'},
+    {code:'ME-012',name:'Infusion Pump',unit:'pc'},
+    {code:'ME-013',name:'Fetal Monitor',unit:'pc'},
+    {code:'ME-014',name:'Delivery Table / Birthing Bed',unit:'pc'},
+    {code:'ME-015',name:'Bassinet / Newborn Warmer',unit:'pc'},
+    {code:'ME-016',name:'Incubator',unit:'pc'},
+    {code:'ME-017',name:'Phototherapy Unit',unit:'pc'},
+  ]},
+  SAFETY:{icon:'🔥',assets:[
+    {code:'SF-001',name:'Fire Extinguisher (CO2)',unit:'pc'},
+    {code:'SF-002',name:'Fire Extinguisher (Dry Chem)',unit:'pc'},
+    {code:'SF-003',name:'Smoke Detector',unit:'pc'},
+    {code:'SF-004',name:'Heat Detector',unit:'pc'},
+    {code:'SF-005',name:'Fire Alarm Bell/Horn',unit:'pc'},
+    {code:'SF-006',name:'Fire Sprinkler Head',unit:'pc'},
+    {code:'SF-007',name:'Safety Signage / Evacuation Map',unit:'pc'},
+    {code:'SF-008',name:'First Aid Kit',unit:'set'},
+    {code:'SF-009',name:'Fire Hose Cabinet',unit:'pc'},
+    {code:'SF-010',name:'Spill Kit',unit:'set'},
+  ]},
+  HOUSEKEEPING:{icon:'🧹',assets:[
+    {code:'JN-001',name:'Waste Bin (Pedal Type)',unit:'pc'},
+    {code:'JN-002',name:'Sharps Container',unit:'pc'},
+    {code:'JN-003',name:'Infectious Waste Bin (Yellow)',unit:'pc'},
+    {code:'JN-004',name:'Janitorial Closet',unit:'pc'},
+    {code:'JN-005',name:'Mop Wringer Set',unit:'set'},
+    {code:'JN-006',name:'Privacy Curtain / Divider',unit:'set'},
+    {code:'JN-007',name:'Toilet Paper Holder',unit:'pc'},
+    {code:'JN-008',name:'Paper Towel Dispenser',unit:'pc'},
+    {code:'JN-009',name:'Trash Bag Holder (SS)',unit:'pc'},
+  ]},
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ROOM TEMPLATES
+// ═══════════════════════════════════════════════════════════
+const TEMPLATES = {
+  'PATIENT ROOM':{ label:'Patient Room / Ward Room',
+    ELECTRICAL:['EL-001','EL-003','EL-004','EL-005','EL-006','EL-007','EL-008','EL-015','EL-016','EL-017'],
+    VENTILATION:['AC-S01','EF-W01','VF-P01','AC-T01'],
+    PLUMBING:['PL-001','PL-002','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007','CP-022'],
+    MEDICAL:['ME-001','ME-003','ME-004','ME-005'],SAFETY:['SF-001','SF-003','SF-007'],
+    HOUSEKEEPING:['JN-001','JN-002','JN-006'],
+  },
+  'CORRIDOR':{ label:'Corridor / Hallway',
+    ELECTRICAL:['EL-001','EL-003','EL-004','EL-005','EL-019','EL-017'],
+    VENTILATION:['EF-W01','EF-C01','VF-W01'],
+    PLUMBING:['PL-004'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-020','CP-007','CP-024'],
+    MEDICAL:[],SAFETY:['SF-003','SF-004','SF-006','SF-007','SF-009'],
+    HOUSEKEEPING:['JN-001'],
+  },
+  'ICU':{ label:'Intensive Care Unit',
+    ELECTRICAL:['EL-001','EL-003','EL-004','EL-005','EL-006','EL-007','EL-008','EL-015','EL-016','EL-017'],
+    VENTILATION:['AC-S01','AC-H01','AC-N01','AC-T01','EF-C01','VT-001'],
+    PLUMBING:['PL-001','PL-002','PL-004','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-013','CP-005','CP-022'],
+    MEDICAL:['ME-002','ME-003','ME-004','ME-005','ME-008','ME-009','ME-010','ME-011','ME-012'],
+    SAFETY:['SF-001','SF-003','SF-005','SF-007'],HOUSEKEEPING:['JN-001','JN-002','JN-003','JN-006'],
+  },
+  'OPERATING ROOM':{ label:'Operating Room / OR',
+    ELECTRICAL:['EL-002','EL-004','EL-005','EL-006','EL-007','EL-016','EL-017','EL-014'],
+    VENTILATION:['AC-C01','AC-H01','AC-A01','AC-T01','EF-D01','VT-001','VT-002'],
+    PLUMBING:['PL-001','PL-002','PL-007','PL-004','PL-006'],
+    CIVIL:['CP-001','CP-013','CP-005','CP-021'],
+    MEDICAL:['ME-008','ME-009','ME-010','ME-011'],SAFETY:['SF-002','SF-003','SF-005','SF-008'],
+    HOUSEKEEPING:['JN-002','JN-003'],
+  },
+  'DELIVERY ROOM':{ label:'Delivery Room / DR',
+    ELECTRICAL:['EL-002','EL-003','EL-004','EL-005','EL-006','EL-007','EL-015','EL-016','EL-017'],
+    VENTILATION:['AC-S01','AC-W01','AC-T01','EF-C01'],
+    PLUMBING:['PL-001','PL-002','PL-007','PL-004','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-013','CP-005','CP-022'],
+    MEDICAL:['ME-014','ME-015','ME-009','ME-010','ME-011','ME-008'],
+    SAFETY:['SF-001','SF-003','SF-007','SF-008'],HOUSEKEEPING:['JN-001','JN-002','JN-003'],
+  },
+  'LABOR ROOM':{ label:'Labor Room',
+    ELECTRICAL:['EL-001','EL-003','EL-004','EL-006','EL-015','EL-016','EL-017'],
+    VENTILATION:['AC-S01','AC-T01','EF-W01','VF-P01'],
+    PLUMBING:['PL-001','PL-002','PL-004','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007'],
+    MEDICAL:['ME-001','ME-013','ME-009','ME-003'],
+    SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001','JN-002','JN-006'],
+  },
+  'POSTPARTUM':{ label:'Postpartum Room',
+    ELECTRICAL:['EL-001','EL-003','EL-004','EL-006','EL-015','EL-016','EL-017'],
+    VENTILATION:['AC-S01','AC-T01','EF-W01','VF-P01'],
+    PLUMBING:['PL-001','PL-002','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007'],
+    MEDICAL:['ME-001','ME-003','ME-004','ME-005','ME-015'],
+    SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001','JN-002','JN-006'],
+  },
+  'NURSERY':{ label:'Neonatal Nursery',
+    ELECTRICAL:['EL-002','EL-003','EL-004','EL-006','EL-016','EL-017'],
+    VENTILATION:['AC-S01','AC-H01','AC-T01','EF-C01'],
+    PLUMBING:['PL-001','PL-002','PL-004','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-013','CP-005','CP-007'],
+    MEDICAL:['ME-015','ME-016','ME-017','ME-009','ME-011'],
+    SAFETY:['SF-003','SF-007'],HOUSEKEEPING:['JN-001','JN-002','JN-003'],
+  },
+  'NURSE STATION':{ label:'Nurse Station',
+    ELECTRICAL:['EL-001','EL-006','EL-008','EL-015','EL-014','EL-017','EL-018'],
+    VENTILATION:['AC-S01','AC-T01','VF-T01'],
+    PLUMBING:['PL-001','PL-002','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-019'],
+    MEDICAL:['ME-006','ME-007'],SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001'],
+  },
+  'EMERGENCY ROOM':{ label:'Emergency Room / ER',
+    ELECTRICAL:['EL-001','EL-004','EL-005','EL-006','EL-007','EL-008','EL-015','EL-016','EL-017'],
+    VENTILATION:['AC-S01','AC-W01','AC-T01','EF-W01','VF-P01'],
+    PLUMBING:['PL-001','PL-002','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-005'],
+    MEDICAL:['ME-001','ME-003','ME-008','ME-009','ME-010','ME-011'],
+    SAFETY:['SF-001','SF-003','SF-004','SF-005','SF-007','SF-008'],
+    HOUSEKEEPING:['JN-001','JN-002','JN-003','JN-006'],
+  },
+  'OPD':{ label:'Out-Patient Department',
+    ELECTRICAL:['EL-001','EL-003','EL-004','EL-006','EL-008','EL-017','EL-018'],
+    VENTILATION:['AC-S01','AC-T01','EF-W01','VF-P01'],
+    PLUMBING:['PL-001','PL-002','PL-005','PL-006'],
+    CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007'],
+    MEDICAL:['ME-001','ME-004','ME-006'],SAFETY:['SF-001','SF-003','SF-007','SF-008'],
+    HOUSEKEEPING:['JN-001','JN-002','JN-006'],
+  },
+  'LABORATORY':{ label:'Clinical Laboratory',
+    ELECTRICAL:['EL-001','EL-003','EL-006','EL-007','EL-008','EL-014','EL-017'],
+    VENTILATION:['AC-S01','AC-T01','EF-W01','EF-D01','VT-001','VT-002'],
+    PLUMBING:['PL-001','PL-002','PL-007','PL-004','PL-011'],
+    CIVIL:['CP-001','CP-013','CP-005','CP-007','CP-019'],
+    MEDICAL:[],SAFETY:['SF-002','SF-003','SF-005','SF-008','SF-010'],
+    HOUSEKEEPING:['JN-001','JN-002','JN-003'],
+  },
+  'RADIOLOGY':{ label:'Radiology / X-Ray',
+    ELECTRICAL:['EL-003','EL-004','EL-005','EL-006','EL-007','EL-014','EL-017'],
+    VENTILATION:['AC-S01','AC-T01'],
+    PLUMBING:['PL-001','PL-002'],CIVIL:['CP-001','CP-013','CP-005','CP-006'],
+    MEDICAL:[],SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001'],
+  },
+  'COMFORT ROOM':{ label:'Comfort Room / Toilet',
+    ELECTRICAL:['EL-003'],
+    VENTILATION:['EF-W01','EF-C01'],
+    PLUMBING:['PL-001','PL-002','PL-003','PL-004','PL-005','PL-009','PL-017'],
+    CIVIL:['CP-001','CP-017','CP-011','CP-005','CP-022'],
+    MEDICAL:[],SAFETY:['SF-007'],HOUSEKEEPING:['JN-001','JN-007','JN-008'],
+  },
+  'UTILITY ROOM':{ label:'Utility / Janitor Room',
+    ELECTRICAL:['EL-001','EL-006','EL-008'],
+    VENTILATION:['EF-W01'],
+    PLUMBING:['PL-004','PL-008','PL-021'],CIVIL:['CP-001','CP-016','CP-011','CP-005'],
+    MEDICAL:[],SAFETY:['SF-007'],HOUSEKEEPING:['JN-004','JN-005','JN-009'],
+  },
+  'STORAGE ROOM':{ label:'Storage / Supply Room',
+    ELECTRICAL:['EL-001','EL-006','EL-008'],
+    VENTILATION:['EF-W01','VF-W01'],
+    PLUMBING:[],CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-019'],
+    MEDICAL:[],SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-004'],
+  },
+  'CONFERENCE ROOM':{ label:'Conference / Meeting Room',
+    ELECTRICAL:['EL-002','EL-003','EL-006','EL-008','EL-009','EL-017','EL-018'],
+    VENTILATION:['AC-S01','AC-T01','EF-W01'],
+    PLUMBING:[],CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007'],
+    MEDICAL:[],SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001'],
+  },
+  'ADMIN OFFICE':{ label:'Administrative Office',
+    ELECTRICAL:['EL-001','EL-006','EL-008','EL-013','EL-014','EL-017','EL-018'],
+    VENTILATION:['AC-S01','AC-T01','EF-W01','VF-T01'],
+    PLUMBING:[],CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007','CP-019'],
+    MEDICAL:[],SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001'],
+  },
+  'GENERATOR ROOM':{ label:'Generator Room',
+    ELECTRICAL:['EL-001','EL-006','EL-013'],
+    VENTILATION:['EF-W01','EF-I01','EF-D01','VT-001'],
+    PLUMBING:['PL-004','PL-022'],CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-009'],
+    MEDICAL:[],SAFETY:['SF-002','SF-003','SF-004','SF-007','SF-008'],HOUSEKEEPING:[],
+  },
+  'PHARMACY':{ label:'Pharmacy',
+    ELECTRICAL:['EL-001','EL-006','EL-008','EL-014','EL-017'],
+    VENTILATION:['AC-S01','AC-W01','AC-T01','EF-C01'],
+    PLUMBING:['PL-001','PL-002'],CIVIL:['CP-001','CP-016','CP-011','CP-005','CP-007','CP-019'],
+    MEDICAL:['ME-007'],SAFETY:['SF-001','SF-003','SF-007'],HOUSEKEEPING:['JN-001'],
+  },
+  'STAIRCASE':{ label:'Staircase / Stairwell',
+    ELECTRICAL:['EL-001','EL-004','EL-005','EL-017'],
+    VENTILATION:['EF-W01'],
+    PLUMBING:['PL-004'],CIVIL:['CP-016','CP-011','CP-018','CP-025','CP-023'],
+    MEDICAL:[],SAFETY:['SF-003','SF-007','SF-009'],HOUSEKEEPING:['JN-001'],
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let SESSION = { ward:'', inspector:'', date:'', rooms:[] };
+let currentRoomKey = null;
+let currentRoomLabel = '';
+let currentAssets = {};  // code -> {code,name,unit,category,qty,specs:{},condition,remarks}
+
+// ═══════════════════════════════════════════════════════════
+//  DOM
+// ═══════════════════════════════════════════════════════════
+const modalOv     = document.getElementById('modalOv');
+const appRoot     = document.getElementById('appRoot');
+const mWard       = document.getElementById('mWard');
+const mInspector  = document.getElementById('mInspector');
+const mDate       = document.getElementById('mDate');
+const btnStart    = document.getElementById('btnStart');
+const hdrWard     = document.getElementById('hdrWard');
+const hdrDate     = document.getElementById('hdrDate');
+const hdrInsp     = document.getElementById('hdrInsp');
+const hdrRooms    = document.getElementById('hdrRoomsBadge');
+const btnNewSess  = document.getElementById('btnNewSession');
+const roomInp     = document.getElementById('roomInp');
+const sugg        = document.getElementById('sugg');
+const btnDetect   = document.getElementById('btnDetect');
+const sdot        = document.getElementById('sdot');
+const stext       = document.getElementById('stext');
+const scnt        = document.getElementById('scnt');
+const assetsSec   = document.getElementById('assetsSec');
+const catContainer= document.getElementById('catContainer');
+const btnRoomDone = document.getElementById('btnRoomDone');
+const sessionList = document.getElementById('sessionList');
+const noRooms     = document.getElementById('noRooms');
+const btnExportAll= document.getElementById('btnExportAll');
+const sumTotal    = document.getElementById('sumTotal');
+const sumGood     = document.getElementById('sumGood');
+const sumRepair   = document.getElementById('sumRepair');
+const sumReplace  = document.getElementById('sumReplace');
+const toastEl     = document.getElementById('toast');
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════
+function showToast(msg, dur=2800){
+  toastEl.textContent=msg;toastEl.classList.add('show');
+  setTimeout(()=>toastEl.classList.remove('show'),dur);
+}
+function setStatus(txt,live=false,cnt=''){
+  stext.textContent=txt; scnt.textContent=cnt;
+  sdot.className='sdot'+(live?' live':'');
+}
+function slugCond(c){ return (c||'Unknown').replace(/\s+/g,''); }
+
+// ═══════════════════════════════════════════════════════════
+//  SESSION START
+// ═══════════════════════════════════════════════════════════
+mDate.value = new Date().toISOString().slice(0,10);
+
+btnStart.addEventListener('click', ()=>{
+  const ward = mWard.value.trim();
+  const insp = mInspector.value.trim();
+  if(!ward){ mWard.focus(); return; }
+  SESSION = { ward, inspector:insp, date:mDate.value, rooms:[] };
+  hdrWard.textContent = ward.toUpperCase();
+  hdrDate.textContent = SESSION.date;
+  hdrInsp.textContent = insp ? '👤 '+insp : '';
+  modalOv.style.display='none';
+  appRoot.style.display='flex';
+  setStatus('Session started — enter a room name to begin scanning');
+});
+
+btnNewSess.addEventListener('click', ()=>{
+  if(!confirm('Start a new session? Current data will be cleared.')) return;
+  SESSION={ward:'',inspector:'',date:'',rooms:[]};
+  currentAssets={};currentRoomKey=null;
+  assetsSec.classList.remove('show');
+  btnRoomDone.classList.remove('show');
+  roomInp.value='';
+  renderSessionPanel();
+  setStatus('Ready — enter a room name to begin');
+  modalOv.style.display='flex';
+  appRoot.style.display='none';
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SUGGESTIONS
+// ═══════════════════════════════════════════════════════════
+function getSugg(val){
+  if(!val) return [];
+  val=val.toUpperCase();
+  return Object.entries(TEMPLATES).filter(([k,t])=>
+    k.includes(val)||t.label.toUpperCase().includes(val)||
+    // match room numbers generically
+    val.match(/^\d/)
+  ).slice(0,7);
+}
+
+roomInp.addEventListener('input', ()=>{
+  const val=roomInp.value.trim();
+  const matches=getSugg(val);
+  if(matches.length && val){
+    sugg.innerHTML='';
+    matches.forEach(([key,tpl])=>{
+      const d=document.createElement('div');
+      d.className='sugg-item';
+      d.innerHTML=`🚪 ${tpl.label}<span class="sugg-tag">${key}</span>`;
+      d.addEventListener('click',()=>{
+        sugg.classList.remove('show');
+        doScan(key, roomInp.value.trim()||tpl.label);
+      });
+      sugg.appendChild(d);
+    });
+    sugg.classList.add('show');
+  } else { sugg.classList.remove('show'); }
+});
+
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.room-inner')) sugg.classList.remove('show');
+});
+
+roomInp.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ sugg.classList.remove('show'); triggerDetect(); }
+});
+
+btnDetect.addEventListener('click', ()=>{ sugg.classList.remove('show'); triggerDetect(); });
+
+function triggerDetect(){
+  const val=roomInp.value.trim().toUpperCase();
+  // Direct match
+  let key=Object.keys(TEMPLATES).find(k=>k===val||TEMPLATES[k].label.toUpperCase()===val);
+  if(!key){
+    // Partial match
+    const partial=getSugg(val);
+    if(partial.length) key=partial[0][0];
+  }
+  // If starts with digit → generic patient room
+  if(!key && roomInp.value.trim().match(/^\d/)) key='PATIENT ROOM';
+  if(!key && roomInp.value.toLowerCase().includes('corridor')) key='CORRIDOR';
+  if(!key && roomInp.value.toLowerCase().includes('hallway')) key='CORRIDOR';
+  if(!key && roomInp.value.toLowerCase().includes('cr')) key='COMFORT ROOM';
+  if(!key && roomInp.value.toLowerCase().includes('toilet')) key='COMFORT ROOM';
+  if(!key && roomInp.value.toLowerCase().includes('stair')) key='STAIRCASE';
+  doScan(key, roomInp.value.trim());
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCAN / RENDER
+// ═══════════════════════════════════════════════════════════
+function doScan(templateKey, roomLabel){
+  currentAssets={};
+  catContainer.innerHTML='';
+  assetsSec.classList.remove('show');
+  btnRoomDone.classList.remove('show');
+
+  if(!templateKey||!TEMPLATES[templateKey]){
+    setStatus('No template matched — try a different room name.');
+    return;
+  }
+  currentRoomKey=templateKey;
+  currentRoomLabel=roomLabel||TEMPLATES[templateKey].label;
+  setStatus(`Scanning: ${currentRoomLabel}`,true);
+
+  const tpl=TEMPLATES[templateKey];
+  let totalAssets=0;
+
+  Object.entries(ASSET_DB).forEach(([catKey,catData])=>{
+    const codes=tpl[catKey]||[];
+    if(!codes.length) return;
+    const assets=codes.map(c=>catData.assets.find(a=>a.code===c)).filter(Boolean);
+    if(!assets.length) return;
+    totalAssets+=assets.length;
+
+    const block=document.createElement('div');
+    block.className='cat-block';
+
+    // Header
+    const hdr=document.createElement('div');
+    hdr.className='cat-hdr';
+    hdr.innerHTML=`<span class="cat-icon">${catData.icon}</span><span class="cat-name">${catKey}</span><span class="cat-cnt">${assets.length} items</span><span class="cat-tog">▾</span>`;
+    block.appendChild(hdr);
+
+    const body=document.createElement('div');
+    body.className='cat-body';
+
+    // Select all bar
+    const sal=document.createElement('div');
+    sal.className='sal-bar';
+    const bsa=document.createElement('button');bsa.className='btn-sa';bsa.textContent='SELECT ALL';
+    const bsc=document.createElement('button');bsc.className='btn-sa';bsc.textContent='CLEAR';
+    sal.appendChild(bsa);sal.appendChild(bsc);
+    body.appendChild(sal);
+
+    bsa.addEventListener('click',()=>{
+      body.querySelectorAll('.asset-row:not(.checked)').forEach(r=>r.querySelector('.asset-main').click());
+    });
+    bsc.addEventListener('click',()=>{
+      body.querySelectorAll('.asset-row.checked').forEach(r=>r.querySelector('.asset-main').click());
+    });
+
+    assets.forEach(asset=>{
+      const row=document.createElement('div');
+      row.className='asset-row';
+      row.dataset.code=asset.code;
+
+      // Main row
+      const main=document.createElement('div');
+      main.className='asset-main';
+      main.innerHTML=`
+        <div class="achk"></div>
+        <div class="acode">${asset.code}</div>
+        <div class="aname">${asset.name}</div>
+        <div class="aunit">${asset.unit}</div>
+        <div class="qty-w">
+          <button class="qbtn" data-d="-">−</button>
+          <input class="qinp" value="1" type="number" min="1" max="999">
+          <button class="qbtn" data-d="+">+</button>
+        </div>`;
+      row.appendChild(main);
+
+      // Detail panel
+      const detail=document.createElement('div');
+      detail.className='asset-detail';
+
+      // Specs
+      const specDef=SPECS[asset.code];
+      if(specDef){
+        Object.entries(specDef).forEach(([specKey,options])=>{
+          const dr=document.createElement('div');dr.className='det-row';
+          dr.innerHTML=`<div class="det-lbl">${specKey}</div><div class="pills" data-spec="${specKey}"></div>`;
+          const pillsWrap=dr.querySelector('.pills');
+          options.forEach(opt=>{
+            const p=document.createElement('button');
+            p.className='pill';p.textContent=opt;p.dataset.val=opt;
+            p.addEventListener('click',e=>{
+              e.stopPropagation();
+              pillsWrap.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+              p.classList.add('active');
+              if(currentAssets[asset.code]){
+                if(!currentAssets[asset.code].specs) currentAssets[asset.code].specs={};
+                currentAssets[asset.code].specs[specKey]=opt;
+              }
+            });
+            pillsWrap.appendChild(p);
+          });
+          detail.appendChild(dr);
+        });
+      }
+
+      // Condition
+      const cdr=document.createElement('div');cdr.className='det-row';
+      cdr.innerHTML=`<div class="det-lbl">CONDITION</div><div class="pills cond-pills"></div>`;
+      const condWrap=cdr.querySelector('.cond-pills');
+      ['Good','Need Repair','For Replacement'].forEach(cond=>{
+        const cp=document.createElement('button');
+        cp.className='cond-pill';cp.dataset.cond=cond;cp.textContent=
+          cond==='Good'?'✅ Good':cond==='Need Repair'?'🔧 Need Repair':'❌ For Replacement';
+        cp.addEventListener('click',e=>{
+          e.stopPropagation();
+          condWrap.querySelectorAll('.cond-pill').forEach(x=>x.classList.remove('active'));
+          cp.classList.add('active');
+          if(currentAssets[asset.code]) currentAssets[asset.code].condition=cond;
+          updateDoneBtn();
+        });
+        condWrap.appendChild(cp);
+      });
+      detail.appendChild(cdr);
+
+      // Remarks
+      const rdr=document.createElement('div');rdr.className='det-row';
+      rdr.innerHTML=`<div class="det-lbl">REMARKS</div><input class="remarks-inp" placeholder="Optional notes…">`;
+      rdr.querySelector('.remarks-inp').addEventListener('input',e=>{
+        e.stopPropagation();
+        if(currentAssets[asset.code]) currentAssets[asset.code].remarks=e.target.value;
+      });
+      rdr.querySelector('.remarks-inp').addEventListener('click',e=>e.stopPropagation());
+      detail.appendChild(rdr);
+      row.appendChild(detail);
+
+      // Qty handlers
+      const qinp=main.querySelector('.qinp');
+      main.querySelectorAll('.qbtn').forEach(btn=>{
+        btn.addEventListener('click',e=>{
+          e.stopPropagation();
+          let v=parseInt(qinp.value)||1;
+          v=btn.dataset.d==='+'?v+1:Math.max(1,v-1);
+          qinp.value=v;
+          if(currentAssets[asset.code]) currentAssets[asset.code].qty=v;
+        });
+      });
+      qinp.addEventListener('click',e=>e.stopPropagation());
+      qinp.addEventListener('input',()=>{ if(currentAssets[asset.code]) currentAssets[asset.code].qty=parseInt(qinp.value)||1; });
+
+      // Toggle check
+      main.addEventListener('click',()=>{
+        if(row.classList.contains('checked')){
+          row.classList.remove('checked');
+          row.querySelector('.achk').textContent='';
+          delete currentAssets[asset.code];
+        } else {
+          row.classList.add('checked');
+          row.querySelector('.achk').textContent='✓';
+          currentAssets[asset.code]={
+            code:asset.code,name:asset.name,unit:asset.unit,
+            category:catKey,qty:parseInt(qinp.value)||1,
+            specs:{},condition:'',remarks:''
+          };
+        }
+        updateStatus();
+        updateDoneBtn();
+      });
+
+      body.appendChild(row);
+    });
+
+    hdr.addEventListener('click',()=>{
+      const hidden=body.style.display==='none';
+      body.style.display=hidden?'':'none';
+      hdr.querySelector('.cat-tog').textContent=hidden?'▾':'▸';
+    });
+
+    block.appendChild(body);
+    catContainer.appendChild(block);
+  });
+
+  assetsSec.classList.add('show');
+  setTimeout(()=>{
+    setStatus(`${currentRoomLabel} — ${totalAssets} assets loaded. Tick assets present.`,false,`0 selected`);
+  },50);
+}
+
+function updateStatus(){
+  const n=Object.keys(currentAssets).length;
+  setStatus(`${currentRoomLabel}`,false,`${n} selected`);
+}
+
+function updateDoneBtn(){
+  const n=Object.keys(currentAssets).length;
+  btnRoomDone.classList.toggle('show', n>0);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAVE ROOM
+// ═══════════════════════════════════════════════════════════
+btnRoomDone.addEventListener('click',()=>{
+  const assets=Object.values(currentAssets);
+  if(!assets.length){ showToast('⚠ No assets selected!'); return; }
+
+  SESSION.rooms.push({
+    roomLabel: currentRoomLabel,
+    templateKey: currentRoomKey,
+    assets: JSON.parse(JSON.stringify(assets)),
+    savedAt: new Date().toISOString(),
+  });
+
+  renderSessionPanel();
+  showToast(`✓ ${currentRoomLabel} saved — ${assets.length} assets`);
+
+  // Reset for next room
+  currentAssets={};currentRoomKey=null;currentRoomLabel='';
+  roomInp.value='';
+  catContainer.innerHTML='';
+  assetsSec.classList.remove('show');
+  btnRoomDone.classList.remove('show');
+  setStatus('Room saved! Enter next room to continue.',false,'');
+  roomInp.focus();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SESSION PANEL
+// ═══════════════════════════════════════════════════════════
+function renderSessionPanel(){
+  hdrRooms.textContent=SESSION.rooms.length+' room'+(SESSION.rooms.length!==1?'s':'');
+  btnExportAll.disabled=SESSION.rooms.length===0;
+
+  // Summary counts
+  let tot=0,good=0,repair=0,replace=0;
+  SESSION.rooms.forEach(r=>r.assets.forEach(a=>{
+    tot++;
+    if(a.condition==='Good') good++;
+    else if(a.condition==='Need Repair') repair++;
+    else if(a.condition==='For Replacement') replace++;
+  }));
+  sumTotal.textContent=tot;sumGood.textContent=good;
+  sumRepair.textContent=repair;sumReplace.textContent=replace;
+
+  // Room cards
+  // Remove existing cards but keep noRooms
+  sessionList.querySelectorAll('.room-card').forEach(c=>c.remove());
+  noRooms.style.display=SESSION.rooms.length?'none':'block';
+
+  SESSION.rooms.forEach((room,ri)=>{
+    const card=document.createElement('div');
+    card.className='room-card';
+    card.innerHTML=`
+      <div class="rc-header">
+        <div class="rc-num">${room.roomLabel}</div>
+        <div class="rc-type">${room.templateKey}</div>
+        <div class="rc-count">${room.assets.length}✦</div>
+        <span class="rc-del" title="Delete room">✕</span>
+        <span class="rc-tog">▾</span>
+      </div>
+      <div class="rc-body" id="rcb-${ri}"></div>`;
+
+    const rcb=card.querySelector(`#rcb-${ri}`);
+    rcb.classList.toggle('open', SESSION.rooms.length<=3); // auto-open if few rooms
+
+    room.assets.forEach(a=>{
+      const s=slugCond(a.condition);
+      const specStr=a.specs&&Object.keys(a.specs).length?Object.values(a.specs).join(' / '):'—';
+      const line=document.createElement('div');
+      line.className='rc-asset-line';
+      line.innerHTML=`
+        <div class="rc-cond ${s}"></div>
+        <div class="rc-acode">${a.code}</div>
+        <div style="flex:1;font-size:10px">${a.name} <span style="color:var(--text-dim);font-size:9px">${specStr}</span></div>
+        <div class="rc-qty">×${a.qty}</div>`;
+      rcb.appendChild(line);
+    });
+
+    card.querySelector('.rc-header').addEventListener('click',e=>{
+      if(e.target.classList.contains('rc-del')) return;
+      rcb.classList.toggle('open');
+      card.querySelector('.rc-tog').textContent=rcb.classList.contains('open')?'▾':'▸';
+    });
+
+    card.querySelector('.rc-del').addEventListener('click',e=>{
+      e.stopPropagation();
+      if(!confirm(`Remove "${room.roomLabel}" from session?`)) return;
+      SESSION.rooms.splice(ri,1);
+      renderSessionPanel();
+    });
+
+    sessionList.insertBefore(card, noRooms);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPORT CSV
+// ═══════════════════════════════════════════════════════════
+btnExportAll.addEventListener('click',()=>{
+  if(!SESSION.rooms.length){ showToast('⚠ No rooms to export!'); return; }
+
+  const headers=['Ward','Inspector','Date','Room','Room Type','Category',
+    'Asset Code','Description','Unit','Quantity','Specifications','Condition','Remarks'];
+
+  const rows=[];
+  SESSION.rooms.forEach(room=>{
+    room.assets.forEach(a=>{
+      const specStr=a.specs&&Object.keys(a.specs).length
+        ? Object.entries(a.specs).map(([k,v])=>`${k}:${v}`).join('; ')
+        : '';
+      rows.push([
+        `"${SESSION.ward}"`,
+        `"${SESSION.inspector}"`,
+        SESSION.date,
+        `"${room.roomLabel}"`,
+        room.templateKey,
+        a.category,
+        a.code,
+        `"${a.name}"`,
+        a.unit,
+        a.qty,
+        `"${specStr}"`,
+        `"${a.condition||'Not Tagged'}"`,
+        `"${(a.remarks||'').replace(/"/g,"'")}"`,
+      ]);
+    });
+  });
+
+  const csv=[headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  const fname=`HAMMS_${SESSION.ward.replace(/\s+/g,'_')}_${SESSION.date}.csv`;
+  link.href=url;link.download=fname;link.click();
+  URL.revokeObjectURL(url);
+  showToast(`✓ Master CSV exported — ${SESSION.rooms.length} rooms, ${rows.length} assets`);
+});
+
+// Init
+mDate.value=new Date().toISOString().slice(0,10);
+renderSessionPanel();
+setStatus('Ready — Enter a room name to begin');
+</script>
+
+<!-- ═══ PWA SERVICE WORKER REGISTRATION ═══ -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg=>console.log('[HAMMS SW] Registered, scope:',reg.scope))
+      .catch(err=>console.warn('[HAMMS SW] Registration failed:',err));
+  });
+}
+</script>
+<!-- ═══ END SW REGISTRATION ═══ -->
+</body>
+</html>
