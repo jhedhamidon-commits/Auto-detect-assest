@@ -1,0 +1,2 @@
+# Auto-detect-assest
+Survey
